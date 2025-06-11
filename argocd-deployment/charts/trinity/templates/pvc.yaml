@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.trinity .Values.global.service.trinity.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trinity-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.trinity.pvc.size }}
+{{- end }}

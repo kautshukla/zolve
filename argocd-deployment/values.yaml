@@ -1,0 +1,436 @@
+global:
+  namespace: "orgname"
+  deploy:
+    secret: false
+    mysql: false
+    airflow: false
+    hive: false
+    redis: false
+    kafka: false
+    trino: false
+    rangeradmin: false
+    neo4j: false
+    apollo: false
+    cerebrum: false
+    artemis: false
+    dex: false
+    mirage: false
+    cosmos: false
+    trinity: false
+    cortex: false
+    jobweaver: false
+    monitor: false
+
+  monitoring:
+    enabled: false
+
+  service:
+    namespace: "{{ .Values.global.namespace }}"
+    replicas: 1
+    tag: "v3.0.0"
+    imagePullPolicy: "Always"
+    secretName: "dview-secrets"
+    resources: {}
+#      requests:
+#        cpu: "100m"
+#        memory: "0.5Gi"
+#      limits:
+#        cpu: "1000m"
+#        memory: "1Gi"
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: "roles"
+                  operator: "In"
+                  values:
+                    - "fiber-aqua"
+    nodeSelector:
+      kubernetes.io/arch: "arm64"
+    tolerations: []
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 1
+      averageMemoryUtilization: 70
+      averageCpuUtilization: 70
+    terminationGracePeriodSeconds: 30
+
+    monitor:
+      app:
+        image: "dview/pod-monitor"
+        tag: "v2.0.0"
+
+    mysql:
+      app:
+        image: "mysql"
+        tag: "8.0"
+        port: 3306
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+      pvc:
+        enabled: true
+        size: "10Gi"
+
+    jobweaver:
+      replicas: 1
+      dependencies:
+        mysql:
+          port: 3306
+      app:
+        image: "dview/jobweaver"
+        tag: "v3.0.0"
+        pullPolicy: "IfNotPresent"
+        port: 8000
+        resources: {}
+#          requests:
+#            memory: "1Gi"
+#            cpu: "300m"
+#          limits:
+#            memory: "2Gi"
+#            cpu: "1000m"
+        gitSync:
+          volumeRepoPath: "/mnt/data"
+          volumeRepoDestPath: "repo"
+        dbt:
+          dbtDocsLogDir: "/tmp/dbt_docs"
+          dbtArtifactsDir: "/tmp/dbt_artifacts"
+          lineagePort: 8080
+      sidecars:
+        dbt:
+          image: "dview/jobweaver-dbt"
+          tag: "v3.0.0"
+          pullPolicy: "Always"
+          resources: {}
+#            requests:
+#              memory: "300Mi"
+#              cpu: "200m"
+#            limits:
+#              memory: "1000Mi"
+#              cpu: "500m"
+        gitSync:
+          image: "k8s.gcr.io/git-sync/git-sync"
+          tag: "v3.2.2"
+          pullPolicy: "IfNotPresent"
+          resources: {}
+
+    hive:
+      app:
+        image: "dview/hive"
+        tag: "4.0.0"
+        port: 9083
+        pullPolicy: "Always"
+#        affinity:
+#          nodeAffinity:
+#            requiredDuringSchedulingIgnoredDuringExecution:
+#              nodeSelectorTerms:
+#                - matchExpressions:
+#                    - key: "role"
+#                      operator: "In"
+#                      values:
+#                        - "{{ .Values.global.namespace }}"
+#                    - key: "arch"
+#                      operator: "In"
+#                      values: ["arm64"]
+        resources: {}
+      dependencies:
+        mysql:
+          port: 3306
+      pvc:
+        enabled: false
+
+    redis:
+      app:
+        image: "redis"
+        tag: "7.4.0"
+        port: 6379
+        resources: {}
+      pvc:
+        enabled: true
+        size: "10Gi"
+      sidecars: {}
+
+    kafka:
+      app:
+        image: "bitnami/kafka"
+        tag: "3.8.0-debian-12-r3"
+        port: 9092
+        resources: {}
+      replicas: 1
+      pvc:
+        enabled: true
+        size: "8Gi"
+
+    trino:
+      app:
+        image: "dview/trino"
+        tag: "444"
+        port: 8080
+        resources: {}
+      pvc:
+        enabled: false
+      workers: 1
+      ranger:
+        enabled: true
+        repository_name: "aqua"
+        endpoint: "http://ranger-admin:6080"
+      additionalCatalogs: {}
+      sidecars: {}
+
+    apollo:
+      pvc:
+        enabled: false
+      dependencies:
+        mysql:
+          port: 3306
+      app:
+        image: "dview/apollo"
+        tag: "v3.0.0"
+        port: 8080
+#        affinity:
+#          nodeAffinity:
+#            requiredDuringSchedulingIgnoredDuringExecution:
+#              nodeSelectorTerms:
+#                - matchExpressions:
+#                    - key: "role"
+#                      operator: "In"
+#                      values:
+#                        - "{{ .Values.global.namespace }}"
+        resources: {}
+      sidecars: {}
+
+    cerebrum:
+      pvc:
+        enabled: false
+      dependencies:
+        mysql:
+          port: 3306
+      app:
+        image: "dview/cerebrum-app"
+        tag: "v5.0.0"
+        port: 8000
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: "roles"
+                      operator: "In"
+                      values: ["fiber-aqua"]
+        resources: {}
+      sidecars:
+        cerebrumWorkers:
+          image: "dview/cerebrum-worker"
+          tag: "v5.0.0"
+          count: 3
+          resources: {}
+
+    artemis:
+      pvc:
+        enabled: false
+      dependencies:
+        mysql:
+          port: 3306
+      app:
+        image: "dview/artemis"
+        tag: "v3.0.0"
+        port: 8080
+#        affinity:
+#          nodeAffinity:
+#            requiredDuringSchedulingIgnoredDuringExecution:
+#              nodeSelectorTerms:
+#                - matchExpressions:
+#                    - key: "role"
+#                      operator: "In"
+#                      values:
+#                        - "{{ .Values.global.namespace }}"
+        resources: {}
+      sidecars: {}
+    pyserve:
+      pvc:
+        enabled: false
+      app:
+        image: "dview/pyserve"
+        tag: "v2.0.0"
+        affinity: {}
+        resources: {}
+    dex:
+      pvc:
+        enabled: false
+      dependencies:
+        mysql:
+          port: 3306
+      app:
+        image: "dview/dex"
+        tag: "v1.1.1"
+        port: 5556
+#        affinity:
+#          nodeAffinity:
+#            requiredDuringSchedulingIgnoredDuringExecution:
+#              nodeSelectorTerms:
+#                - matchExpressions:
+#                    - key: "role"
+#                      operator: "In"
+#                      values:
+#                        - "{{ .Values.global.namespace }}"
+        resources: {}
+      sidecars: {}
+
+    mirage:
+      pvc:
+        enabled: false
+      app:
+        image: "dview/mirage"
+        tag: "v3.0.0"
+        port: 80
+#        affinity:
+#          nodeAffinity:
+#            requiredDuringSchedulingIgnoredDuringExecution:
+#              nodeSelectorTerms:
+#                - matchExpressions:
+#                    - key: "role"
+#                      operator: "In"
+#                      values:
+#                        - "{{ .Values.global.namespace }}"
+        resources: {}
+      sidecars: {}
+
+    cosmos:
+      dependencies:
+        mysql:
+          port: 3306
+      pvc:
+        enabled: false
+      app:
+        image: "dview/cosmos"
+        tag: "v3.0.0"
+        port: 8085
+#        affinity:
+#          nodeAffinity:
+#            requiredDuringSchedulingIgnoredDuringExecution:
+#              nodeSelectorTerms:
+#                - matchExpressions:
+#                    - key: "role"
+#                      operator: "In"
+#                      values:
+#                        - "{{ .Values.global.namespace }}"
+        resources: {}
+      sidecars: {}
+
+    trinity:
+      pvc:
+        enabled: false
+      app:
+        image: "dview/trinity"
+        tag: "v1.1.1"
+        port: 8080
+#        affinity:
+#          nodeAffinity:
+#            requiredDuringSchedulingIgnoredDuringExecution:
+#              nodeSelectorTerms:
+#                - matchExpressions:
+#                    - key: "role"
+#                      operator: "In"
+#                      values:
+#                        - "{{ .Values.global.namespace }}"
+        resources: {}
+      sidecars: {}
+
+    rangeradmin:
+      dependencies:
+        mysql:
+          port: 3306
+      pvc:
+        enabled: false
+      app:
+        image: "dview/ranger-admin"
+        tag: "v2.5.0"
+        port: 6080
+        resources: {}
+      sidecars: {}
+
+    cortex:
+      app:
+        image: "dview/cortex-app"
+        tag: "v5.0.0"
+        port: 8080
+        resources: {}
+      pvc:
+        enabled: true
+        size: "10Gi"
+      sidecars:
+        cortexWorker:
+          image: "dview/cortex-worker"
+          tag: "v4.0.2"
+          count: 3
+          resources: {}
+
+    airflow:
+      app:
+        port: 8080
+        resources: {}
+
+  virtualService:
+    gateways: "istio-ingress/internal-gateway"
+    deploy: true
+    domain: "dview.io"
+    hive:
+      required: true
+      hosts: "hive-{{ .Values.global.namespace }}.dview.io"
+    redis:
+      required: true
+      hosts: "redis-{{ .Values.global.namespace }}.dview.io"
+    kafka:
+      required: true
+      hosts: "kafka-{{ .Values.global.namespace }}.dview.io"
+    trino:
+      required: true
+      hosts: "trino-{{ .Values.global.namespace }}.dview.io"
+    apollo:
+      required: true
+      hosts: "apollo-{{ .Values.global.namespace }}.dview.io"
+    cerebrum:
+      required: true
+      hosts: "cerebrum-{{ .Values.global.namespace }}.dview.io"
+    artemis:
+      required: true
+      hosts: "artemis-{{ .Values.global.namespace }}.dview.io"
+    dex:
+      required: false
+      hosts: "dex-{{ .Values.global.namespace }}.dview.io"
+    mirage:
+      required: true
+      hosts: "cloud-{{ .Values.global.namespace }}.dview.io"
+    cosmos:
+      required: true
+      hosts: "cosmos-{{ .Values.global.namespace }}.dview.io"
+    trinity:
+      required: true
+      hosts: "trinity-{{ .Values.global.namespace }}.dview.io"
+    rangeradmin:
+      required: true
+      hosts: "rangeradmin-{{ .Values.global.namespace }}.dview.io"
+    cortex:
+      required: true
+      hosts: "cortex-{{ .Values.global.namespace }}.dview.io"
+    neo4j:
+      required: true
+      hosts: "neo4j-{{ .Values.global.namespace }}.dview.io"
+    mysql:
+      required: true
+      hosts: "mysql-{{ .Values.global.namespace }}.dview.io"
+    airflow:
+      required: true
+      hosts: "airflow-{{ .Values.global.namespace }}.dview.io"
+    jobweaver:
+      required: true
+      hosts: "jobweaver-{{ .Values.global.namespace }}.dview.io"
+      dbt:
+        required: true
+        hosts: "dbtdocs-{{ .Values.global.namespace }}.dview.io"

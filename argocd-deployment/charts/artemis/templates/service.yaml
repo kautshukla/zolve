@@ -1,0 +1,23 @@
+{{- if .Values.global.deploy.artemis }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: artemis
+    k8s-app: artemis
+  name: artemis
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: {{ .Values.global.service.artemis.app.port | default 80 }}
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: {{ .Values.global.service.artemis.app.port | default 80 }}
+  selector:
+    k8s-app: artemis
+  sessionAffinity: None
+  type: ClusterIP
+{{- end }}

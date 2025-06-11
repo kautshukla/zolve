@@ -1,0 +1,50 @@
+{{- if .Values.global.deploy.rangeradmin }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ranger-admin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ranger-admin
+      k8s-app: ranger-admin
+  template:
+    metadata:
+      labels:
+        app: ranger-admin
+        k8s-app: ranger-admin
+    spec:
+      containers:
+        - ports:
+            - containerPort: 6080
+          name: ranger-admin
+          image: dview/ranger-admin:v2.5.0
+          imagePullPolicy: Always
+          command: [ "/bin/bash", "-c" ]
+          env:
+            - name: POLICY_MANAGER_URL
+              value: http://localhost:6080
+            - name: ADMIN_USERNAME
+              value: admin
+            - name: RANGER_ADMIN_JAVA_VERSION
+              value: "8"
+            - name: RANGER_ADMIN_PASSWORD
+              value: rangerR0cks!
+            - name: ADMIN_PASSWORD
+              value: rangerR0cks!
+          args:
+            - "cp /opt/config-map/install.properties /opt/ranger/admin/ && chmod 777 /opt/ranger/admin/install.properties && /opt/ranger/replace_env_vars.sh /opt/ranger/admin/install.properties && /home/ranger/scripts/ranger.sh"
+          volumeMounts:
+            - name: ranger-admin-config
+              mountPath: /opt/config-map/install.properties
+              subPath: install.properties
+              readOnly: true
+      volumes:
+        - name: ranger-admin-config
+          configMap:
+            name: ranger-admin-config
+            items:
+              - key: install.properties
+                path: install.properties
+{{- end }}

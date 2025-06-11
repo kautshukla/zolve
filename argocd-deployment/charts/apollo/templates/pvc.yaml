@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.apollo .Values.global.service.apollo.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: apollo-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.apollo.pvc.size }}
+{{- end }}

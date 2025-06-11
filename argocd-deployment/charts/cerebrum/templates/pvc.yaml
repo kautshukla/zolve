@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.cerebrum .Values.global.service.cerebrum.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cerebrum-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.cerebrum.pvc.size }}
+{{- end }}

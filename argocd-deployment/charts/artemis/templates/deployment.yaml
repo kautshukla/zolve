@@ -1,0 +1,113 @@
+{{- if .Values.global.deploy.artemis }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: artemis
+  name: artemis
+spec:
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.global.service.artemis.app.replicas | default .Values.global.service.replicas }} 
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: artemis
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        k8s-app: artemis
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.global.service.terminationGracePeriodSeconds | default 30 }}
+      {{- with .Values.global.service.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.service.artemis.app.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.service.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if index .Values.global.service .Chart.Name "dependencies" }}
+      initContainers:
+        {{- range $depName, $dep := index .Values.global.service .Chart.Name "dependencies" }}
+        - name: wait-for-{{ $depName }}
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z -w 2 {{ $dep.host | default (printf "%s.%s.svc.cluster.local" $depName $.Release.Namespace) }} {{ $dep.port }}; do
+                echo "Waiting for {{ $depName }} to be ready..."
+                sleep 2
+              done
+              echo "{{ $depName }} is ready!"
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "16Mi"
+            limits:
+              cpu: "50m"
+              memory: "32Mi"
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: artemis
+          image: {{ .Values.global.service.artemis.app.image }}:{{ .Values.global.service.artemis.app.tag | default .Values.global.service.tag }}
+          imagePullPolicy: {{ .Values.global.service.imagePullPolicy | quote }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.global.service.secretName | quote }}
+          ports:
+            - containerPort: {{ .Values.global.service.artemis.app.port | default 80 }}
+              name: artemis
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.global.service.artemis.app.resources | default .Values.global.service.resources | nindent 12 }}
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 120
+            timeoutSeconds: 5
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 60
+        - name: py
+          image: {{ .Values.global.service.pyserve.app.image }}:{{ default .Values.global.service.tag .Values.global.service.pyserve.app.tag }}
+          command: ["/bin/bash", "-c", "python3 /pyserve-app/jpserve.py"]
+          imagePullPolicy: {{ .Values.global.service.imagePullPolicy | quote }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.global.service.secretName | quote }}
+          ports:
+            - containerPort: 8888
+              name: py
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.global.service.artemis.app.resources | default .Values.global.service.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - touch
+                - /tmp/healthy
+          readinessProbe:
+            exec:
+              command:
+                - touch
+                - /tmp/healthy
+{{- end }}

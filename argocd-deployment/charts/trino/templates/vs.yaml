@@ -1,0 +1,18 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: trino
+spec:
+  gateways:
+    - istio-ingress/internal-gateway
+  hosts:
+    - {{ .Values.global.virtualService.trino.hosts | quote }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: trino
+            port:
+              number: 8080

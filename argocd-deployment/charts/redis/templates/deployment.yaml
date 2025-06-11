@@ -1,0 +1,69 @@
+{{- if .Values.global.deploy.redis }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.global.service.redis.replicas | default 1 }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: redis
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.global.service.terminationGracePeriodSeconds | default 30 }}
+
+      {{- with (default .Values.global.service.affinity .Values.global.service.redis.app.affinity) }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.global.service.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      volumes:
+        - name: redis-storage
+          persistentVolumeClaim:
+            claimName: redis-pvc
+
+      containers:
+        - name: redis
+          image: "{{ .Values.global.service.redis.app.image }}:{{ .Values.global.service.redis.app.tag | default .Values.global.service.tag | default "latest" }}"
+          imagePullPolicy: {{ .Values.global.service.redis.app.pullPolicy | default .Values.global.service.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.global.service.redis.app.port | default 80 }}
+              protocol: TCP
+          command: ["redis-server"]
+          args:
+            - "--requirepass"
+            - "$(COMMON_REDIS_PASSWORD)"
+          volumeMounts:
+            - mountPath: /data
+              name: redis-storage
+          envFrom:
+            - secretRef:
+                name: {{ .Values.global.service.secretName | quote }}
+          resources:
+            {{- toYaml (default (dict) .Values.global.service.redis.app.resources) | nindent 12 }}
+
+  #        {{- if .Values.global.service.redis.sidecars }}
+  #        {{- range $sidecarName, $sidecar := .Values.global.service.redis.sidecars }}
+  #        - name: {{ $sidecarName }}
+  #          image: "{{ $sidecar.image }}:{{ $sidecar.tag | default .Values.global.service.tag | default "latest" }}"
+  #          imagePullPolicy: {{ $sidecar.pullPolicy | default .Values.global.service.imagePullPolicy }}
+  #          resources:
+  #            {{- toYaml (default (dict) $sidecar.resources) | nindent 12 }}
+  #        {{- end }}
+  #        {{- end }}
+  {{- end }}

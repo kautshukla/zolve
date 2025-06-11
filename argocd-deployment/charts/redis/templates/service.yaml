@@ -1,0 +1,14 @@
+{{- if .Values.global.deploy.redis }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  ports:
+    - name: redis
+      port: {{ .Values.global.service.redis.app.port | default 6379 }}
+      targetPort: 6379
+      protocol: TCP
+  selector:
+    app: redis
+{{- end }}

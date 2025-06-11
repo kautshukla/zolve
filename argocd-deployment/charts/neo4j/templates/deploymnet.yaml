@@ -1,0 +1,161 @@
+{{- if .Values.global.deploy.kafka }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    helm.neo4j.com/neo4j.name: "neo4j"
+    helm.neo4j.com/clustering: "false"
+    app: "neo4j"
+    helm.neo4j.com/instance: neo4j
+  name: neo4j
+spec:
+  serviceName: "neo4j"
+  podManagementPolicy: "Parallel" # This setting means that the StatefulSet controller doesn't block applying changes until the existing Pod is READY.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "neo4j"
+      helm.neo4j.com/instance: "neo4j"
+  template:
+    metadata:
+      labels:
+        app: "neo4j"
+        helm.neo4j.com/neo4j.name: "neo4j"
+        helm.neo4j.com/clustering: "false"
+        helm.neo4j.com/pod_category: "neo4j-instance" # used for anti affinity rules
+        helm.neo4j.com/neo4j.loadbalancer: "include"
+        helm.neo4j.com/instance: "neo4j"
+      annotations:
+        "checksum/neo4j-config": 10965386fda97f93cb2f04160d0d2cb50df9e77dd9b12e1925ef6c37f64e1879
+        "checksum/neo4j-env": 48b8c21d784ac8bc90ff2534459af84f82b70ab85c2cdb121056eb64f8b2c481
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: "neo4j"
+                  helm.neo4j.com/pod_category: "neo4j-instance"
+              topologyKey: kubernetes.io/hostname
+      dnsPolicy: ClusterFirst
+      securityContext:
+        fsGroup: 7474
+        fsGroupChangePolicy: Always
+        runAsGroup: 7474
+        runAsNonRoot: true
+        runAsUser: 7474
+
+      terminationGracePeriodSeconds: 3600
+      containers:
+        - name: "neo4j"
+          image: neo4j:5.22.0
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: "neo4j-env"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: SERVICE_NEO4J_ADMIN
+              value: "neo4j-admin"
+            - name: SERVICE_NEO4J_INTERNALS
+              value: "neo4j-internals"
+            - name: SERVICE_NEO4J
+              value: "neo4j"
+          ports:
+            - containerPort: 7474
+              name: http
+            - containerPort: 7687
+              name: bolt
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: 2Gi
+            requests:
+              cpu: "0.5"
+              memory: 2Gi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            runAsGroup: 7474
+            runAsNonRoot: true
+            runAsUser: 7474
+          volumeMounts:
+            - mountPath: "/config/neo4j.conf"
+              name: neo4j-conf
+            - mountPath: "/config/server-logs.xml"
+              name: neo4j-server-logs
+            - mountPath: "/config/user-logs.xml"
+              name: neo4j-user-logs
+            - mountPath: "/config/neo4j-auth"
+              name: neo4j-auth
+
+            - mountPath: "/backups"
+              name: "data"
+              subPathExpr: "backups"
+            - mountPath: "/data"
+              name: "data"
+              subPathExpr: "data"
+            - mountPath: "/import"
+              name: "data"
+              subPathExpr: "import"
+            - mountPath: "/licenses"
+              name: "data"
+              subPathExpr: "licenses"
+            - mountPath: "/logs"
+              name: "data"
+              subPathExpr: "logs/$(POD_NAME)"
+            - mountPath: "/metrics"
+              name: "data"
+              subPathExpr: "metrics/$(POD_NAME)"
+          readinessProbe:
+            tcpSocket:
+              port: 7687
+            failureThreshold: 20
+            timeoutSeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 7687
+            failureThreshold: 40
+            timeoutSeconds: 10
+            periodSeconds: 5
+          startupProbe:
+            tcpSocket:
+              port: 7687
+            failureThreshold: 1000
+            periodSeconds: 5
+      volumes:
+        - name: neo4j-conf
+          projected:
+            defaultMode: 0440
+            sources:
+              - configMap:
+                  name: "neo4j-default-config"
+              - configMap:
+                  name: "neo4j-user-config"
+              - configMap:
+                  name: "neo4j-k8s-config"
+        - name: neo4j-server-logs
+          configMap:
+            name: "neo4j-server-logs-config"
+        - name: neo4j-user-logs
+          configMap:
+            name: "neo4j-user-logs-config"
+        - name: "neo4j-auth"
+          secret:
+            secretName: "neo4j-auth"
+  volumeClaimTemplates:
+    - metadata:
+        name: "data"
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: gp2
+{{- end }}

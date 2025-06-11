@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.trino .Values.global.service.trino.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trino-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.trino.pvc.size }}
+{{- end }}

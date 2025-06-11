@@ -1,0 +1,5 @@
+apiVersion: v2
+name: monitor
+description: Pod status monitor for dview-stack
+version: 1.0.0
+appVersion: "1.0"

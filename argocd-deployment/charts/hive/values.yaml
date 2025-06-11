@@ -1,0 +1,15 @@
+service:
+  mysql:
+    host: mysql
+    port: 3306
+    user: root
+    password: root
+    resources: {}
+  conf:
+    hiveSite:
+      hive_metastore_uris: thrift://hive-metastore:9083
+      fs.s3a.access.key:
+      fs.s3a.secret.key:
+      hive.metastore.warehouse.dir: s3a://dview-nrt/aqua/warehouse
+      datanucleus.autoCreateSchema: true
+      metastore_uris: thrift://hive-metastore:9083

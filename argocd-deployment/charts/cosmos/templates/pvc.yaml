@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.cosmos .Values.global.service.cosmos.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cosmos-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.cosmos.pvc.size }}
+{{- end }}

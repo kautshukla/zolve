@@ -1,0 +1,20 @@
+{{- if and .Values.global.virtualService.deploy .Values.global.virtualService.mirage.required .Values.global.deploy.mirage }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: mirage-virtual-svc
+spec:
+  gateways:
+    - {{ .Values.global.virtualService.gateways | quote }}
+  hosts:
+    - {{ .Values.global.virtualService.mirage.hosts | quote }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: mirage
+            port:
+              number: {{ .Values.global.service.mirage.app.port | default 80 }}
+{{- end }}

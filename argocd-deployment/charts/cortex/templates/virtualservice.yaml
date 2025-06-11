@@ -1,0 +1,21 @@
+{{- if and .Values.global.virtualService.deploy .Values.global.virtualService.cortex.required .Values.global.deploy.cortex }}
+# Source: cortex/templates/vs.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: cortex-virtual-svc
+spec:
+  gateways:
+    - {{ .Values.global.virtualService.gateways | quote }}
+  hosts:
+    - {{ .Values.global.virtualService.cortex.hosts | quote }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: cortex
+            port:
+              number: {{ .Values.global.service.cortex.app.port | default 8080 }}
+{{- end }}

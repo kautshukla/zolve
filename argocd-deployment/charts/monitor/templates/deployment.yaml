@@ -1,0 +1,35 @@
+{{- if .Values.global.deploy.monitor }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-monitor
+  labels:
+    app: pod-monitor
+    release: pod-monitor
+spec:
+  selector:
+    matchLabels:
+      app: pod-monitor
+  template:
+    metadata:
+      labels:
+        app: pod-monitor
+    spec:
+      serviceAccountName: pod-monitor-sa
+      containers:
+        - name: monitor
+          imagePullPolicy: {{ .Values.global.service.imagePullPolicy | quote }}
+          image: {{ .Values.global.service.monitor.app.image }}:{{ .Values.global.service.monitor.app.tag }}
+          env:
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: POD_MONITOR_CHECK_INTERVAL_SECS
+              value: "600"
+            - name: NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: SLACK_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.service.secretName | quote }}
+                  key: "SLACK_WEBHOOK_URL"
+{{- end }}

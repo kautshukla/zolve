@@ -1,0 +1,26 @@
+{{- if .Values.global.deploy.jobweaver }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: jobweaver
+  labels:
+    app: jobweaver
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: {{ .Values.global.service.jobweaver.app.port | default 80 }}
+    - port: {{ .Values.global.service.jobweaver.app.port | default 8000 }}
+      targetPort: {{ .Values.global.service.jobweaver.app.port | default 8000 }}
+      protocol: TCP
+      name: app
+    - port: {{ .Values.global.service.jobweaver.app.dbt.lineagePort | default 8080 }}
+      targetPort: {{ .Values.global.service.jobweaver.app.dbt.lineagePort | default 8080 }}
+      protocol: TCP
+      name: dbt-docs
+  selector:
+    app: jobweaver
+  sessionAffinity: None
+  type: ClusterIP
+{{- end }}

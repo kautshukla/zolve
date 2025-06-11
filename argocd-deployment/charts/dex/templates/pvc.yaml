@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.dex .Values.global.service.dex.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dex-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.dex.pvc.size }}
+{{- end }}

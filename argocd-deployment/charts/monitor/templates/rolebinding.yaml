@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pod-monitor-rolebinding
+  namespace: automation
+subjects:
+- kind: ServiceAccount
+  name: pod-monitor-sa
+  namespace: automation
+roleRef:
+  kind: Role
+  name: pod-monitor-role
+  apiGroup: rbac.authorization.k8s.io

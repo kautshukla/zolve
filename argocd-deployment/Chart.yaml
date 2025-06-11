@@ -1,0 +1,76 @@
+apiVersion: v2
+name: dview-stack
+version: 1.0.0
+dependencies:
+  - name: airflow
+    version: "1.14.0"
+    repository: "https://airflow.apache.org"
+    condition: global.deploy.airflow
+  - name: hive
+    version: "1.0.0"
+    repository: "file://charts/hive"
+    condition: global.deploy.hive
+  - name: redis
+    version: "1.0.0"
+    repository: "file://charts/redis"
+    condition: global.deploy.redis
+  - name: kafka
+    version: "26.8.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: global.deploy.kafka
+  - name: trino
+    version: "1.0.0"
+    repository: "file://charts/trino"
+    condition: global.deploy.trino
+  - name: apollo
+    version: "1.0.0"
+    repository: "file://charts/apollo"
+    condition: global.deploy.apollo
+  - name: cerebrum
+    version: "1.0.0"
+    repository: "file://charts/cerebrum"
+    condition: global.deploy.cerebrum
+  - name: artemis
+    version: "1.0.0"
+    repository: "file://charts/artemis"
+    condition: global.deploy.artemis
+  - name: jobweaver
+    version: "1.0.0"
+    repository: "file://charts/jobweaver"
+    condition: global.deploy.jobweaver
+  - name: dex
+    version: "1.0.0"
+    repository: "file://charts/dex"
+    condition: global.deploy.dex
+  - name: mirage
+    version: "1.0.0"
+    repository: "file://charts/mirage"
+    condition: global.deploy.mirage
+  - name: cosmos
+    version: "1.0.0"
+    repository: "file://charts/cosmos"
+    condition: global.deploy.cosmos
+  - name: trinity
+    version: "1.0.0"
+    repository: "file://charts/trinity"
+    condition: global.deploy.trinity
+  - name: rangeradmin
+    version: "1.0.0"
+    repository: "file://charts/rangeradmin"
+    condition: global.deploy.rangeradmin
+  - name: cortex
+    version: "1.0.0"
+    repository: "file://charts/cortex"
+    condition: global.deploy.cortex
+  - name: neo4j
+    version: "0.1.0"
+    repository: "file://charts/neo4j"
+    condition: global.deploy.neo4j
+  - name: mysql
+    version: "1.0.0"
+    repository: "file://charts/mysql"
+    condition: global.deploy.mysql
+  - name: monitor
+    version: "1.0.0"
+    repository: "file://charts/monitor"
+    condition: global.deploy.monitor

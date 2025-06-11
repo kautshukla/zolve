@@ -1,0 +1,15 @@
+{{- if and .Values.global.deploy.kafka .Values.global.virtualService.deploy .Values.global.virtualService.kafka.required }}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: kafka-vs
+spec:
+  hosts:
+  - {{ .Values.global.virtualService.kafka.hosts }}
+  gateways:
+  - {{ .Values.global.virtualService.gateways }}
+  http:
+  - route:
+    - destination:
+        host: kafka
+{{- end }}

@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.kafka .Values.global.service.kafka.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kafka-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.kafka.pvc.size }}
+{{- end }}

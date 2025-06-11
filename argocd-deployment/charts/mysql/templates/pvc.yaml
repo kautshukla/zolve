@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.mysql .Values.global.service.mysql.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.mysql.pvc.size }}
+{{- end }}

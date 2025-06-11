@@ -1,0 +1,189 @@
+{{- if .Values.global.deploy.trino }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trino-coordinator
+  labels:
+    app: trino
+    chart: trino-0.14.0
+    release: trino
+    heritage: Helm
+    component: coordinator
+spec:
+  selector:
+    matchLabels:
+      app: trino
+      release: trino
+      component: coordinator
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      annotations:
+        checksum/catalog-config: {{ toYaml (tpl (.Files.Get "configmap-catalog.yaml") .) | sha256sum }}
+        checksum/additional-catalogs: {{ toYaml .Values.additionalCatalogs | sha256sum }}
+#        checksum/secrets: {{ .Release.Namespace | printf "/platform-user-secrets" | sha256sum }}
+      labels:
+        app: trino
+        release: trino
+        component: coordinator
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: roles
+                    operator: In
+                    values:
+                      - "fiber-aqua"
+
+      serviceAccountName: trino
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      volumes:
+        - emptyDir:
+            sizeLimit: 2Gi
+          name: git-sync
+        - name: pre-install
+          emptyDir: {}
+        - name: config-volume
+          configMap:
+            name: trino-coordinator
+        - name: catalog-volume
+          configMap:
+            name: trino-catalog
+        - name: schemas-volume
+          configMap:
+            name: trino-schemas-volume-coordinator
+        - name: ranger-properties
+          configMap:
+            name: trino-ranger-properties
+      imagePullSecrets: []
+      containers:
+        - name: trino-coordinator  # Made this the first container to be default
+          image: "dview/trino:469"
+          imagePullPolicy: Always
+#          envFrom:
+#            - secretRef:
+#                name: platform-user-secrets
+          env:
+            - name: LAST_CHANGE_UPDATED
+              value: {{ .Values.currentTimeStamp }}
+            - name: RANGER_ENABLED
+              value: "false"
+            - name: RANGER_CONFIG_PATH
+              value: /mnt/ranger/
+            - name: TRINO_MOUNT_CONFIG_PATH
+              value: /mnt/etc/trino
+            - name: TRINO_CONFIG_PATH
+              value: /etc/trino
+            - name: AWS_ACCESS_KEY
+              value: null
+            - name: accessKey
+              value: null
+            - name: secretKey
+              value: null
+            - name: AWS_SECRET_KEY
+              value: null
+            - name:  TRINO_RANGER_CONFIG_PATH
+              value: /mnt/ranger/config
+            - name: RDS_JDBC_PWD
+              value: {{ .Values.mysql.password }}
+#            - name: MONGO_JDBC_URL
+#              valueFrom:
+#                secretKeyRef:
+#                  key: MONGO_JDBC_URL
+#                  name: fiber-dev
+          volumeMounts:
+            - mountPath: /mnt/ranger/config
+              name: ranger-properties
+            - mountPath: /mnt/etc/trino
+              name: config-volume
+            - mountPath: /mnt/etc/trino/catalog
+              name: catalog-volume
+            - mountPath: /mnt/etc/trino/schemas
+              name: schemas-volume
+            - mountPath: /mnt/data/repo/schemas
+              name: git-sync
+              readOnly: true
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /v1/info
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+            successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /v1/info
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+            successThreshold: 1
+          resources: {}
+        - env:
+            - name: GIT_SYNC_REPO
+              valueFrom:
+                secretKeyRef:
+                  key: COMMON_GIT_REPO
+                  name: dview-secrets
+            - name: GIT_SYNC_BRANCH
+              value: master
+            - name: GIT_SYNC_ROOT
+              value: /mnt/data/repo/schemas
+            - name: GIT_SYNC_DEST
+              value: repo
+            - name: GIT_SYNC_ONE_TIME
+              value: "false"
+            - name: GIT_SYNC_REV
+              value: HEAD
+            - name: GIT_SYNC_DEPTH
+              value: "1"
+            - name: GIT_SYNC_WAIT
+              value: "60"
+            - name: GIT_SYNC_TIMEOUT
+              value: "120"
+            - name: GIT_SYNC_ADD_USER
+              value: "true"
+            - name: GIT_SYNC_MAX_SYNC_FAILURES
+              value: "0"
+            - name: GIT_KNOWN_HOSTS
+              value: "false"
+            - name: CONNECTION_CHECK_MAX_COUNT
+              value: "0"
+            - name: GIT_SYNC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: COMMON_GIT_USERNAME
+                  name: dview-secrets
+            - name: GIT_SYNC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: COMMON_GIT_TOKEN
+                  name: dview-secrets
+          image: k8s.gcr.io/git-sync/git-sync:v3.2.2
+          imagePullPolicy: IfNotPresent
+          name: git-sync
+          resources: {}
+          securityContext:
+            runAsUser: 0
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /mnt/data/repo/schemas
+              name: git-sync
+{{- end }}

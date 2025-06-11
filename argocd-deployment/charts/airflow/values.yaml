@@ -1,0 +1,333 @@
+fullnameOverride: "airflow"
+
+nameOverride: "airflow"
+
+useStandardNaming: true
+
+securityContext: {}
+
+securityContexts:
+  pod: {}
+  containers: {}
+
+containerLifecycleHooks: {}
+
+airflowHome: "/opt/airflow"
+
+defaultAirflowRepository: "apache/airflow"
+
+defaultAirflowTag: "2.9.3"
+
+defaultAirflowDigest: ~
+
+airflowVersion: "2.9.3"
+
+images:
+  airflow:
+    repository: "dview/airflow"
+    tag: "v1.0.0"
+    digest: ~
+    pullPolicy: "IfNotPresent"
+  pod_template:
+    repository: ~
+    tag: ~
+    pullPolicy: "IfNotPresent"
+  flower:
+    repository: ~
+    tag: ~
+    pullPolicy: "IfNotPresent"
+  statsd:
+    repository: "quay.io/prometheus/statsd-exporter"
+    tag: "v0.26.1"
+    pullPolicy: "IfNotPresent"
+  redis:
+    repository: "redis"
+    tag: "7.2-bookworm"
+    pullPolicy: "IfNotPresent"
+  pgbouncer:
+    repository: "apache/airflow"
+    tag: "airflow-pgbouncer-2024.01.19-1.21.0"
+    pullPolicy: "IfNotPresent"
+  pgbouncerExporter:
+    repository: "apache/airflow"
+    tag: "airflow-pgbouncer-exporter-2024.06.18-0.17.0"
+    pullPolicy: "IfNotPresent"
+  gitSync:
+    repository: "registry.k8s.io/git-sync/git-sync"
+    tag: "v4.1.0"
+    pullPolicy: "IfNotPresent"
+
+nodeSelector: {}
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: "roles"
+              operator: "In"
+              values:
+                - "fiber-aqua"
+priorityClasses: []
+
+extraSecrets: {}
+
+extraConfigMaps: {}
+
+extraEnv: |
+  - name: AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL
+    value: '5'
+  - name: GIT_SYNC_REPO
+    valueFrom:
+      secretKeyRef:
+        name: dview-secrets
+        key: GIT_SYNC_REPO
+        optional: false
+
+extraEnvFrom: ~
+
+data:
+  metadataSecretName: ~
+  resultBackendSecretName: ~
+  brokerUrlSecretName: ~
+  metadataConnection:
+    user: postgres
+    pass: postgres
+    protocol: postgresql
+    host: ~
+    port: 5432
+    db: postgres
+    sslmode: disable
+  resultBackendConnection: ~
+  brokerUrl: ~
+
+fernetKey: ~
+fernetKeySecretName: ~
+
+webserverSecretKey: ~
+webserverSecretKeySecretName: ~
+
+workers:
+  replicas: 1
+  revisionHistoryLimit: ~
+  command: ~
+  args:
+    - "bash"
+    - "-c"
+    - |-
+      cd /opt/airflow/dags/repo/modeling && \
+      dbt docs generate --profiles-dir /opt/airflow/dags/repo/profile && \
+      dbt docs serve --host 0.0.0.0 --port 8081 --profiles-dir /opt/airflow/dags/repo/profile & \
+      exec \
+      airflow {{ semverCompare ">=2.0.0" .Values.airflowVersion | ternary "celery worker" "worker" }}
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    timeoutSeconds: 20
+    failureThreshold: 5
+    periodSeconds: 60
+    command: ~
+  updateStrategy: ~
+  strategy:
+    rollingUpdate:
+      maxSurge: "100%"
+      maxUnavailable: "50%"
+  securityContext: {}
+  securityContexts:
+    pod: {}
+    container: {}
+  containerLifecycleHooks: {}
+  serviceAccount:
+    automountServiceAccountToken: true
+    create: true
+    name: ~
+    annotations: {}
+  hpa:
+    enabled: false
+    minReplicaCount: 0
+    maxReplicaCount: 5
+    metrics:
+      - type: Resource
+        resource:
+          name: cpu
+          target:
+            type: Utilization
+            averageUtilization: 80
+    behavior: {}
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClassName: ~
+    fixPermissions: false
+    annotations: {}
+    securityContexts:
+      container: {}
+    containerLifecycleHooks: {}
+  kerberosSidecar:
+    enabled: false
+    resources: {}
+    securityContexts:
+      container: {}
+    containerLifecycleHooks: {}
+  kerberosInitContainer:
+    enabled: false
+    resources: {}
+  resources: {}
+  terminationGracePeriodSeconds: 600
+  safeToEvict: false
+  extraContainers: []
+  extraInitContainers: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  nodeSelector: {}
+  runtimeClassName: ~
+  priorityClassName: ~
+  affinity: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  hostAliases: []
+  annotations: {}
+  podAnnotations: {}
+  labels: {}
+  logGroomerSidecar:
+    enabled: true
+    command: ~
+    args: ["bash", "/clean-logs"]
+    retentionDays: 15
+    resources: {}
+    securityContexts:
+      container: {}
+  waitForMigrations:
+    enabled: true
+    env: []
+    securityContexts:
+      container: {}
+  env: []
+  volumeClaimTemplates: []
+
+webserver:
+  enabled: true
+  configMapAnnotations: {}
+  hostAliases: []
+  allowPodLogReading: true
+  livenessProbe:
+    initialDelaySeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 5
+    periodSeconds: 10
+    scheme: HTTP
+  readinessProbe:
+    initialDelaySeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 5
+    periodSeconds: 10
+    scheme: HTTP
+  startupProbe:
+    timeoutSeconds: 20
+    failureThreshold: 6
+    periodSeconds: 10
+    scheme: HTTP
+  replicas: 1
+  revisionHistoryLimit: ~
+  command: ~
+  args: ["bash", "-c", "exec airflow webserver"]
+  serviceAccount:
+    automountServiceAccountToken: true
+    create: true
+    name: ~
+    annotations: {}
+  podDisruptionBudget:
+    enabled: false
+    config:
+      maxUnavailable: 1
+  strategy: ~
+  securityContext: {}
+  securityContexts:
+    pod: {}
+    container: {}
+  containerLifecycleHooks: {}
+  extraNetworkPolicies: []
+  networkPolicy:
+    ingress:
+      from: []
+      ports:
+        - port: 8080
+  resources: {}
+  defaultUser:
+    enabled: true
+    role: Admin
+    username: admin
+    email: admin@example.com
+    firstName: admin
+    lastName: user
+    password: admin
+  extraContainers: []
+  extraInitContainers: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  webserverConfig: ~
+  webserverConfigConfigMapName: ~
+  service:
+    type: ClusterIP
+    annotations: {}
+    ports:
+      - name: airflow-ui
+        port: 8080
+    loadBalancerIP: ~
+    loadBalancerSourceRanges: []
+  nodeSelector: {}
+  priorityClassName: ~
+  affinity: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  annotations: {}
+  podAnnotations: {}
+  labels: {}
+  waitForMigrations:
+    enabled: true
+    env: []
+    securityContexts:
+      container: {}
+  env:
+    - name: AIRFLOW__API__AUTH_BACKENDS
+      value: "airflow.api.auth.backend.basic_auth"
+    - name: AIRFLOW__API__ENABLE_EXPERIMENTAL_API
+      value: "true"
+    - name: AIRFLOW__WEBSERVER__AUTHENTICATE
+      value: "True"
+    - name: AIRFLOW__WEBSERVER__AUTH_BACKEND
+      value: "airflow.api.auth.backend.basic_auth"
+    - name: AIRFLOW__TEMP
+      value: "TEMP"
+
+ports:
+  flowerUI: 5555
+  airflowUI: 8080
+  workerLogs: 8793
+  triggererLogs: 8794
+  redisDB: 6379
+  statsdIngest: 9125
+  statsdScrape: 9102
+  pgbouncer: 6543
+  pgbouncerScrape: 9127
+
+postgresql:
+  enabled: true
+  auth:
+    enablePostgresUser: true
+    postgresPassword: postgres
+    username: ""
+    password: ""
+    database: postgres
+
+config:
+  gitSync:
+    enabled: true
+    repo: ""
+    branch: master
+    rev: HEAD
+    depth: 1
+    maxFailures: 0
+    subPath: ""
+
+migrateDatabaseJob:
+  ttlSecondsAfterFinished: null  # Prevent cleanup for debugging

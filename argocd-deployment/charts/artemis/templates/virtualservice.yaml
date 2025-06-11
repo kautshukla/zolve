@@ -1,0 +1,20 @@
+{{- if and .Values.global.virtualService.deploy .Values.global.virtualService.artemis.required .Values.global.deploy.artemis }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: artemis-virtual-svc
+spec:
+  gateways:
+    - {{ .Values.global.virtualService.gateways | quote }}
+  hosts:
+    - {{ .Values.global.virtualService.artemis.hosts | quote }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: artemis
+            port:
+              number: 80
+{{- end }}

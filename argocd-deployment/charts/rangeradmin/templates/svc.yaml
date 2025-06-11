@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ranger-admin
+  labels:
+    app.kubernetes.io/instance: ranger-admin
+    k8s-app: ranger-admin
+
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6080
+      targetPort: 6080
+      protocol: TCP
+      name: http
+    - port: 80
+      targetPort: 6080
+      protocol: TCP
+      name: local
+  selector:
+    app: ranger-admin
+    k8s-app: ranger-admin

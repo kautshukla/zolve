@@ -1,0 +1,59 @@
+{{- if .Values.global.deploy.mirage }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mirage
+  labels:
+    k8s-app: mirage
+spec:
+  progressDeadlineSeconds: 420
+  revisionHistoryLimit: 2
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: mirage
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 0%
+  template:
+    metadata:
+      labels:
+        k8s-app: mirage
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.global.service.terminationGracePeriodSeconds | default 30 }}
+      {{- with .Values.global.service.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.service.mirage.app.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.service.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: mirage
+          image: {{ .Values.global.service.mirage.app.image }}:{{ .Values.global.service.mirage.app.tag | default .Values.global.service.tag }}
+          imagePullPolicy: {{ .Values.global.service.imagePullPolicy | quote }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.global.service.secretName | quote }}
+          ports:
+            - containerPort: {{ .Values.global.service.mirage.app.port | default 80 }}
+              name: mirage
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.global.service.mirage.app.port | default 80 }}
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 60
+          resources:
+            {{- toYaml .Values.global.service.mirage.app.resources | nindent 12 }}
+{{- end }}

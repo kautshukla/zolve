@@ -1,0 +1,21 @@
+neo4j:
+  name: "cerebrum-neo4j"
+  edition: "community"  # Or "enterprise" if licensed
+  acceptLicenseAgreement: "yes"
+  image:
+    customImage: "neo4j:5.22.0"  # Explicitly set to match your intent
+  resources:
+    requests:
+      cpu: "0.5"
+      memory: "2Gi"
+    limits:
+      cpu: "0.5"
+      memory: "2Gi"
+  password: "Dview@123"
+volumes:
+  data:
+    mode: "dynamic"
+    dynamic:
+      storageClassName: "gp2"
+      requests:
+        storage: "50Gi"

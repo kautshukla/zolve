@@ -1,0 +1,268 @@
+replicaCount: 1
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+pvc:
+  name: cortex
+  storage: 10Gi
+  mode: ReadWriteOnce
+  mountPath: /mnt/cortex
+
+logging:
+  persist: true
+
+resources:
+  limits:
+    cpu: 4000m
+    memory: 8192Mi
+  requests:
+    cpu: 2000m
+    memory: 4096Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+volumes: []
+
+volumeMounts: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: roles
+              operator: In
+              values:
+                - metabase
+
+virtual_service:
+  cortex:
+    host: cortex.dview.io
+    create: true
+    name: ""
+env:
+  - name: SQLALCHEMY_DATABASE_URI
+    valueFrom:
+      secretKeyRef:
+        name: dsense-secrets
+        key: CORTEX_SQLALCHEMY_DATABASE_URI
+  - name: REDIS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: dsense-secrets
+        key: CORTEX_REDIS_PASSWORD
+  - name: REDIS_PORT
+    valueFrom:
+      secretKeyRef:
+        name: dsense-secrets
+        key: CORTEX_REDIS_PORT
+  - name: REDIS_HOST
+    valueFrom:
+      secretKeyRef:
+        name: dsense-secrets
+        key: CORTEX_REDIS_HOST
+  - name: WORKER_COUNT
+    value: "2"
+  - name: DSENSE_FERNET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: dsense-secrets
+        key: DSENSE_FERNET_KEY
+  - name: RUN_CORTEX_TEST_CASES
+    value: "false"
+  - name: CORTEX_DINSIGHTS_CLEANUP_THRESHOLD_SECONDS
+    value: "3600"
+
+config:
+  name: cortex-config
+  data:
+    cortex.yaml: |
+      app:
+        name: cortex
+        auth_enabled: ${CORTEX_AUTH_ENABLED}
+        disable_cors: ${CORTEX_DISABLE_CORS}
+        env: PROD
+        auth_exclude_apis:
+          - /health/live
+          - /health/ready
+          - /v1/init
+          - /v1/example
+        internal_token: Testing123
+        fernet_key: ${DSENSE_FERNET_KEY}
+        test_result_dir: ${TEST_RESULT_DIR}
+        init_result_dir: ${INIT_RESULT_DIR}
+        sync_timeout_in_secs: 900
+        cors_allowed_origin_regex: "https?:\\/\\/(?:[a-zA-Z0-9-]+\\.)?"
+        whitelist_domains: "${CORTEX_WHITELIST_DOMAIN}"
+        dataset_retention_days: 4
+        thread_count: 5
+      chat:
+          max_chat_history_range_in_days: 180
+          default_history_lookback_in_days: 30
+
+      redis:
+        host: ${CORTEX_REDIS_HOST}
+        port: ${CORTEX_REDIS_PORT}
+        db: ${CORTEX_REDIS_DB}
+        username: ${CORTEX_REDIS_USER}
+        is_auth_enabled: ${CORTEX_REDIS_AUTH_ENABLED}
+        password: ${CORTEX_REDIS_PASSWORD}
+      
+      trino:
+        host: ${CORTEX_TRINO_HOST}
+        port: ${CORTEX_TRINO_PORT}
+        user: ${CORTEX_TRINO_USER}
+        default_catalog: ${CORTEX_TRINO_DEFAULT_CATALOG}
+        default_schema: ${CORTEX_TRINO_DEFAULT_SCHEMA}
+        fetch_limit: ${CORTEX_TRINO_DEFAULT_FETCH_LIMIT}
+      
+      kpi:
+        catalog:
+          name: hive
+          alias: hive
+          schema:
+            name: __kpi__
+            alias: KPIs
+      
+      uploads:
+        base_path: ${CORTEX_S3_UPLOADS_PATH}
+        temp_path: ${UPLOAD_TEMP_DIR}
+        upload_s3_auth_needed: ${CORTEX_S3_AUTH_NEEDED}
+        aws_access_key: ${CORTEX_AWS_ACCESS_KEY_ID}
+        aws_secret_key: ${CORTEX_AWS_SECRET_ACCESS_KEY}
+        workflow: 'uploads'
+        region_name: ${CORTEX_S3_REGION}
+        catalog:
+          name: ${CORTEX_UPLOADS_CATALOG_NAME}
+          alias: ${CORTEX_UPLOADS_CATALOG_ALIAS}
+          schema:
+            name: ${CORTEX_UPLOADS_SCHEMA_NAME}
+            alias: ${CORTEX_UPLOADS_SCHEMA_ALIAS}
+      
+      stateless:
+        view_retention_hours: 6
+        view_catalog_name: ${CORTEX_STATELESS_CATALOG_NAME}
+        view_schema_name: ${CORTEX_STATELESS_SCHEMA_NAME}
+      
+      cerebrum:
+        endpoint: ${CORTEX_CEREBRUM_ENDPOINT}
+        ready_endpoint: health/ready
+        catalog_endpoint: v1/catalog
+        schema_endpoint: v1/schema
+        table_endpoint: v1/table
+        prompt_endpoint: v1/prompt
+        d_insights_endpoint: v1/insights
+        dataset_endpoint: v1/table/create_dataset
+        sync_endpoint: v1/sync
+        relationship_endpoint: v1/relationship
+        column_endpoint: v1/column
+        search_endpoint: v1/search
+      
+      apollo:
+        endpoint: ${CORTEX_APOLLO_ENDPOINT}
+        validate_endpoint: apollo/v1/auth/login
+        get_user_details_endpoint: apollo/v1/auth/user-details
+      
+      blacklisted:
+        catalogs:
+          - jmx
+          - system
+          - tpch
+          - tpcds
+          - rds
+          - memory
+          - hive
+          - sds
+          - sms
+          - stream
+          - sense
+        schemas:
+          - catalog: "*"
+            schema: information_schema
+          - catalog: "sds"
+            schema: exploratory
+          - catalog: "sds"
+            schema: stateless_datasets
+          - catalog: adhoc
+            schema: stateless_datasets
+          - catalog: adhoc
+            schema: exploratory
+          - catalog: adhoc
+            schema: datasets
+          - catalog: adhoc
+            schema: __stateless__
+          - catalog: adhoc
+            schema: account
+          - catalog: adhoc
+            schema: analytics
+          - catalog: adhoc
+            schema: default
+          - catalog: adhoc
+            schema: stream
+          - catalog: adhoc
+            schema: marketing_reporting
+          - catalog: adhoc
+            schema: dview
+        tables:
+          - catalog: adhoc
+            schema: __uploads__
+            table: __festive_johnson__
+      fine_tune:
+        min_conversation_count: 25
+        save_path: ${FINE_TUNING_DIR}
+      example:
+        file_name: 'applications.csv'
+        table_name: '__festive_johnson__'
+        file_directory: 'resources/example'
+        enabled: false
+      default_user:
+          id: '1'
+          email: 'demo@dview.io'
+          tenant: '__dview__testing__'
+          org: 'dview'
+          role: 'ADMIN'
+      argonaut:
+        endpoint: ${CORTEX_ARGONAUT_ENDPOINT}
+        health_endpoint: health
+        deploy_endpoint: deploy/app
+
+      default_workflows:
+        uploads:
+          name: uploads
+          description: "Uploads workflow"
+
+        openai_fine_tuning:
+          name: fine_tune_openai
+          description: "Workflow that fine tunes OpenAI Models"

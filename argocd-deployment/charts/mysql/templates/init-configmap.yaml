@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-scripts
+data:
+  {{- $files := .Files.Glob "schemas/*.sql" }}
+  {{- if $files }}
+  {{- range $path, $file := $files }}
+  {{ base $path }}: {{ $file | toString | quote }}
+  {{- end }}
+  {{- else }}
+dummy.sql: {{ "SELECT 1;" | quote }}
+  {{- end }}

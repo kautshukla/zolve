@@ -1,0 +1,20 @@
+{{- if and .Values.global.virtualService.deploy .Values.global.virtualService.apollo.required .Values.global.deploy.apollo }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: apollo-virtual-svc
+spec:
+  gateways:
+    - {{ .Values.global.virtualService.gateways | quote }}
+  hosts:
+    - {{ .Values.global.virtualService.apollo.hosts | quote }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: apollo
+            port:
+              number: 80
+{{- end }}

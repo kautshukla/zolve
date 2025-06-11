@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.hive .Values.global.service.hive.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hive-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.hive.pvc.size }}
+{{- end }}

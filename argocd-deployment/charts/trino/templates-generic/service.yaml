@@ -1,0 +1,13 @@
+{{- if .Values.global.deploy.trino }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: trino
+spec:
+  ports:
+  - port: {{ .Values.global.service.trino.app.port | default 80 }}
+    targetPort: {{ .Values.global.service.trino.app.port | default 80 }}
+    protocol: TCP
+  selector:
+    app: trino
+{{- end }}

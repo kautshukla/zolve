@@ -1,0 +1,27 @@
+{{- if .Values.global.deploy.cerebrum }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: cerebrum
+    k8s-app: cerebrum
+  name: cerebrum
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.global.service.cerebrum.app.port | default 8000 }}
+      targetPort: {{ .Values.global.service.cerebrum.app.port | default 8000 }}
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: {{ .Values.global.service.cerebrum.app.port | default 8000 }}
+      protocol: TCP
+      name: https
+    - port: 80
+      targetPort: {{ .Values.global.service.cerebrum.app.port | default 8000 }}
+      protocol: TCP
+      name: local
+  selector:
+    k8s-app: cerebrum
+  sessionAffinity: None
+{{- end }}

@@ -1,0 +1,20 @@
+{{- if and .Values.global.virtualService.deploy .Values.global.virtualService.jobweaver.required .Values.global.deploy.jobweaver }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: jobweaver-virtual-svc
+spec:
+  gateways:
+    - {{ .Values.global.virtualService.gateways | quote }}
+  hosts:
+    - {{ .Values.global.virtualService.jobweaver.hosts | quote }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: jobweaver
+            port:
+              number: 8000
+{{- end }}

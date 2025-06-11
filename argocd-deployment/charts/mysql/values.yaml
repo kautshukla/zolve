@@ -1,0 +1,13 @@
+databases:
+  - apollo
+  - artemis
+  - cosmos
+  - dsense
+  - fortress
+  - ranger
+  - maxwell
+  - metastore
+
+mysql:
+  storageSize: 100Gi
+  storageClass: gp3

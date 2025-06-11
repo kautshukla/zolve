@@ -1,0 +1,49 @@
+{{- if .Values.global.deploy.hive }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hive
+spec:
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.global.service.hive.replicas | default 1 }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: hive
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: hive
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.global.service.terminationGracePeriodSeconds | default 30 }}
+      affinity:
+        {{- toYaml (default .Values.global.service.affinity .Values.global.service.hive.app.affinity) | nindent 8 }}
+      nodeSelector:
+        {{- toYaml .Values.global.service.nodeSelector | nindent 8 }}
+      containers:
+      - name: hive
+        image: {{ .Values.global.service.hive.app.image }}:{{ .Values.global.service.hive.app.tag | default .Values.global.service.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.global.service.hive.app.pullPolicy | default .Values.global.service.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.global.service.hive.app.port | default 80 }}
+          protocol: TCP
+        envFrom:
+            - secretRef:
+                name: {{ .Values.global.service.secretName | quote }}
+        resources:
+          {{- toYaml (default (dict) .Values.global.service.hive.app.resources) | nindent 10 }}
+{{- if .Values.global.service.hive.sidecars }}
+      {{- range $sidecarName, $sidecar := .Values.global.service.hive.sidecars }}
+      - name: {{ $sidecarName }}
+        image: {{ $sidecar.image }}:{{ $sidecar.tag | default .Values.global.service.tag | default "latest" }}
+        imagePullPolicy: {{ $sidecar.pullPolicy | default .Values.global.service.imagePullPolicy }}
+        resources:
+          {{- toYaml (default (dict) $sidecar.resources) | nindent 10 }}
+      {{- end }}
+{{- end }}
+{{- end }}

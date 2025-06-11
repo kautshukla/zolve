@@ -1,0 +1,71 @@
+{{- if .Values.global.deploy.hive }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hive-metastore
+  labels:
+    app.kubernetes.io/name: hive-metastore
+    app.kubernetes.io/component: hive-metastore
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hive-metastore
+      app.kubernetes.io/component: hive-metastore
+      app.kubernetes.io/instance: {{ .Release.Name | quote }}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hive-metastore
+        app.kubernetes.io/component: hive-metastore
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: roles
+                    operator: In
+                    values:
+                      - "fiber-aqua"
+      {{- if index .Values.global.service .Chart.Name "dependencies" }}
+      initContainers:
+        {{- range $depName, $dep := index .Values.global.service .Chart.Name "dependencies" }}
+        - name: wait-for-{{ $depName }}
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z -w 2 {{ $dep.host | default (printf "%s.%s.svc.cluster.local" $depName $.Release.Namespace) }} {{ $dep.port }}; do
+                echo "Waiting for {{ $depName }} to be ready..."
+                sleep 2
+              done
+              echo "{{ $depName }} is ready!"
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "16Mi"
+            limits:
+              cpu: "50m"
+              memory: "32Mi"
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: metastore
+          image: dview/hive:4.0.0   #dview/hive3:1.2-SNAPSHOT #dview/hive3-mysql:v1.1.1
+          imagePullPolicy: Always
+          command:
+            - "/bin/sh"
+            - "-c"
+            - "/opt/hive/bin/hive --service metastore"
+          resources: {}
+          volumeMounts:
+            - name: hive-config
+              mountPath: /opt/hive/conf
+      volumes:
+        - name: hive-config
+          configMap:
+            name: hive-config
+{{- end }}

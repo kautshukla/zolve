@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.cortex .Values.global.service.cortex.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cortex
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.cortex.pvc.size }}
+{{- end }}

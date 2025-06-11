@@ -1,0 +1,173 @@
+{{- if .Values.global.deploy.cortex }}
+# Source: cortex/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: cortex
+  name: cortex
+spec:
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.global.service.cortex.app.replicas | default .Values.global.service.replicas }} 
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: cortex
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        k8s-app: cortex
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.global.service.terminationGracePeriodSeconds | default 30 }}
+      serviceAccountName: default
+      securityContext:
+        {}
+      {{- if index .Values.global.service .Chart.Name "dependencies" }}
+      initContainers:
+        {{- range $depName, $dep := index .Values.global.service .Chart.Name "dependencies" }}
+        - name: wait-for-{{ $depName }}
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z -w 2 {{ $dep.host | default (printf "%s.%s.svc.cluster.local" $depName $.Release.Namespace) }} {{ $dep.port }}; do
+                echo "Waiting for {{ $depName }} to be ready..."
+                sleep 2
+              done
+              echo "{{ $depName }} is ready!"
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "16Mi"
+            limits:
+              cpu: "50m"
+              memory: "32Mi"
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: cortex
+          securityContext:
+            {}
+          image: {{ .Values.global.service.cortex.app.image }}:{{ .Values.global.service.cortex.app.tag | default .Values.global.service.tag }}
+          imagePullPolicy: {{ .Values.global.service.imagePullPolicy | quote }}
+          resources:
+            {{- toYaml .Values.global.service.cortex.app.resources | default .Values.global.service.resources | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.global.service.cortex.app.port | default 8080 }}
+              protocol: TCP
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health/live
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health/ready
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 120
+            successThreshold: 1
+          env:
+            - name: APP_CONFIG_FILE_PATH
+              value: "/etc/cortex/config/cortex.yaml"
+            - name: CORTEX_PORT
+              value: {{ .Values.service.port | quote }}
+            - name: UPLOAD_TEMP_DIR
+              value: "{{.Values.pvc.mountPath}}/uploads"
+            - name: DINSIGHTS_UPLOAD_DIR
+              value: "{{.Values.pvc.mountPath}}/dinsights"
+            - name: FINE_TUNING_DIR
+              value: "{{.Values.pvc.mountPath}}/fine_tuning"
+            - name: TEST_RESULT_DIR
+              value: "/etc/cortex/testing"
+            - name: INIT_RESULT_DIR
+              value: "/etc/cortex/init"
+            - name: LOG_DIR
+              value: "{{ if .Values.logging.persist | default false }}{{ .Values.pvc.mountPath }}/logging{{ else }}/tmp/logging/{{ end }}"
+            {{- toYaml .Values.env | nindent 12 }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.global.service.secretName | quote }}
+          volumeMounts:
+            - mountPath: /etc/cortex/config
+              name: config-volume
+            - mountPath: /etc/cortex/testing
+              name: testing-volume
+            - mountPath: /etc/cortex/init
+              name: init-volume
+            - mountPath: /mnt/cortex
+              name: cortex-volume
+        - name: cortex-worker
+          image: {{ .Values.global.service.cortex.sidecars.cortexWorker.image }}:{{ .Values.global.service.cortex.sidecars.cortexWorker.tag | default .Values.global.service.tag }}
+          imagePullPolicy: {{ .Values.global.service.imagePullPolicy | quote }}
+          resources:
+            {{- toYaml .Values.global.service.cortex.app.resources | default .Values.global.service.resources | nindent 12 }}
+          env:
+            - name: APP_CONFIG_FILE_PATH
+              value: "/etc/cortex/config/cortex.yaml"
+            - name: UPLOAD_TEMP_DIR
+              value: "{{.Values.pvc.mountPath}}/uploads"
+            - name: DINSIGHTS_UPLOAD_DIR
+              value: "{{.Values.pvc.mountPath}}/dinsights"
+            - name: FINE_TUNING_DIR
+              value: "{{.Values.pvc.mountPath}}/fine_tuning"
+            - name: LOG_DIR
+              value: "{{ if .Values.logging.persist | default false }}{{ .Values.pvc.mountPath }}/logging{{ else }}/tmp/logging/{{ end }}"
+            - name: TEST_RESULT_DIR
+              value: "/etc/cortex/testing"
+            - name: INIT_RESULT_DIR
+              value: "/etc/cortex/init"
+            - name: CORTEX_ENDPOINT
+              value: "http://localhost:{{ .Values.service.port }}"
+            {{- toYaml .Values.env | nindent 12 }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.global.service.secretName | quote }}
+          volumeMounts:
+            - mountPath: /etc/cortex/config
+              name: config-volume
+            - mountPath: /etc/cortex/testing
+              name: testing-volume
+            - mountPath: /etc/cortex/init
+              name: init-volume
+            - mountPath: /mnt/cortex
+              name: cortex-volume
+      volumes:
+        - name: config-volume
+          configMap:
+            defaultMode: 420
+            name: cortex-config
+        - name: cortex-volume
+          persistentVolumeClaim:
+            claimName: cortex
+        - emptyDir: {}
+          name: testing-volume
+        - emptyDir: {}
+          name: init-volume
+      {{- with .Values.global.service.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.service.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.service.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

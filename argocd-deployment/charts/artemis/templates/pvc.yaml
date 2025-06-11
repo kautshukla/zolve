@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.artemis .Values.global.service.artemis.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: artemis-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.artemis.pvc.size }}
+{{- end }}

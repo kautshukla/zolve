@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.mirage .Values.global.service.mirage.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mirage-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.mirage.pvc.size }}
+{{- end }}

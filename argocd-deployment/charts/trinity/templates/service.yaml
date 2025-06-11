@@ -1,0 +1,23 @@
+{{- if .Values.global.deploy.trinity }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: trinity
+    k8s-app: trinity
+  name: trinity
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: {{ .Values.global.service.trinity.app.port | default 80 }}
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: {{ .Values.global.service.trinity.app.port | default 80 }}
+  selector:
+    k8s-app: trinity
+  sessionAffinity: None
+  type: ClusterIP
+{{- end }}

@@ -1,0 +1,12 @@
+redis:
+  auth:
+    enabled: true
+    password: "LI9RVollu9"
+    existingUsers:
+      - username: "admin"
+        password: "LI9RVollu9"
+        rules: "on >secure-redis-password ~* +@all"
+  service:
+    type: ClusterIP
+    ports:
+      redis: 6379

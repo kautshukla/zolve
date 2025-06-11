@@ -1,0 +1,12 @@
+{{- if and .Values.global.deploy.rangeradmin .Values.global.service.rangeradmin.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rangeradmin-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.global.service.rangeradmin.pvc.size }}
+{{- end }}

@@ -1,0 +1,23 @@
+{{- if .Values.global.deploy.cosmos }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: cosmos
+    k8s-app: cosmos
+  name: cosmos
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8085
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 8085
+  selector:
+    k8s-app: cosmos
+  sessionAffinity: None
+  type: ClusterIP
+{{- end }}

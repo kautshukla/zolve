@@ -1,0 +1,15 @@
+{{- if and .Values.global.deploy.rangeradmin .Values.global.virtualService.deploy .Values.global.virtualService.rangeradmin.required }}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: rangeradmin-vs
+spec:
+  hosts:
+  - {{ .Values.global.virtualService.rangeradmin.hosts }}
+  gateways:
+  - {{ .Values.global.virtualService.gateways }}
+  http:
+  - route:
+    - destination:
+        host: rangeradmin
+{{- end }}

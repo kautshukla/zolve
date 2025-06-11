@@ -1,0 +1,8 @@
+apiVersion: v2
+name: neo4j
+version: 0.1.0
+description: Custom Neo4j wrapper for dview-stack
+dependencies:
+  - name: neo4j
+    version: "5.22.0"
+    repository: "https://helm.neo4j.com/neo4j"

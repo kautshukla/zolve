@@ -1,0 +1,17 @@
+{{- if and .Values.global.virtualService.deploy .Values.global.virtualService.dex.required .Values.global.deploy.dex }}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: dex-vs
+spec:
+  hosts:
+    - {{ .Values.global.virtualService.dex.hosts | quote }}
+  gateways:
+    - {{ .Values.global.virtualService.gateways | quote }}
+  http:
+    - route:
+        - destination:
+            host: dex
+            port:
+              number: {{ .Values.global.service.dex.app.port | default 5556 }}
+{{- end }}

@@ -1,0 +1,13 @@
+{{- if .Values.global.deploy.hive }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: hive
+spec:
+  ports:
+  - port: {{ .Values.global.service.hive.app.port | default 80 }}
+    targetPort: {{ .Values.global.service.hive.app.port | default 80 }}
+    protocol: TCP
+  selector:
+    app: hive
+{{- end }}

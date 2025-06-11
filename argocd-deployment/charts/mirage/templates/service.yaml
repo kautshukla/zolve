@@ -1,0 +1,23 @@
+{{- if .Values.global.deploy.mirage }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: mirage
+    k8s-app: mirage
+  name: mirage
+spec:
+  ports:
+    - name: http
+      port: {{ .Values.global.service.mirage.app.port | default 80 }}
+      protocol: TCP
+      targetPort: {{ .Values.global.service.mirage.app.port | default 80 }}
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: {{ .Values.global.service.mirage.app.port | default 80 }}
+  selector:
+    k8s-app: mirage
+  sessionAffinity: None
+  type: ClusterIP
+{{- end }}

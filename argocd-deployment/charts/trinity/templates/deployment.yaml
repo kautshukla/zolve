@@ -1,0 +1,55 @@
+{{- if .Values.global.deploy.trinity }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: trinity
+  name: trinity
+spec:
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.global.service.trinity.app.replicas | default .Values.global.service.replicas }} 
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: trinity
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        k8s-app: trinity
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.global.service.terminationGracePeriodSeconds | default 30 }}
+      affinity:
+        {{- toYaml (default .Values.global.service.affinity .Values.global.service.trinity.app.affinity) | nindent 8 }}
+      nodeSelector:
+        {{- toYaml .Values.global.service.nodeSelector | nindent 8 }}
+      {{- with .Values.global.service.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: trinity
+        image: {{ .Values.global.service.trinity.app.image }}:{{ .Values.global.service.trinity.app.tag | default .Values.global.service.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.global.service.trinity.app.pullPolicy | default .Values.global.service.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.global.service.trinity.app.port | default 80 }}
+          protocol: TCP
+        envFrom:
+            - secretRef:
+                name: {{ .Values.global.service.secretName | quote }}
+        resources:
+            {{- toYaml .Values.global.service.trinity.app.resources | default .Values.global.service.resources | nindent 12 }}
+{{- if .Values.global.service.trinity.sidecars }}
+      {{- range $sidecarName, $sidecar := .Values.global.service.trinity.sidecars }}
+      - name: {{ $sidecarName }}
+        image: {{ $sidecar.image }}:{{ $sidecar.tag | default .Values.global.service.tag | default "latest" }}
+        imagePullPolicy: {{ $sidecar.pullPolicy | default .Values.global.service.imagePullPolicy }}
+        resources:
+            {{- toYaml .Values.global.service.trinity.app.resources | default .Values.global.service.resources | nindent 12 }}
+      {{- end }}
+{{- end }}
+{{- end }}

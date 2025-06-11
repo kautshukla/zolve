@@ -1,0 +1,13 @@
+{{- if .Values.global.deploy.rangeradmin }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rangeradmin
+spec:
+  ports:
+  - port: {{ .Values.global.service.rangeradmin.app.port | default 80 }}
+    targetPort: {{ .Values.global.service.rangeradmin.app.port | default 80 }}
+    protocol: TCP
+  selector:
+    app: rangeradmin
+{{- end }}

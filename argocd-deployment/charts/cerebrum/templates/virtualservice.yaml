@@ -1,0 +1,20 @@
+{{- if and .Values.global.virtualService.deploy .Values.global.virtualService.cerebrum.required .Values.global.deploy.cerebrum }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: cerebrum-virtual-vs
+spec:
+  gateways:
+    - {{ .Values.global.virtualService.gateways | quote }}
+  hosts:
+    - {{ .Values.global.virtualService.cerebrum.hosts | quote }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: cerebrum
+            port:
+              number: {{ .Values.global.service.cerebrum.app.port | default 8000 }}
+{{- end }}

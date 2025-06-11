@@ -1,0 +1,19 @@
+{{- if .Values.global.deploy.cortex }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: cortex
+    k8s-app: cortex
+  name: cortex
+spec:
+  ports:
+    - name: http
+      port: {{ .Values.global.service.cortex.app.port | default 8080 }}
+      targetPort: {{ .Values.global.service.cortex.app.port | default 8080 }}
+      protocol: TCP
+  selector:
+    k8s-app: cortex
+  sessionAffinity: None
+  type: ClusterIP
+{{- end }}

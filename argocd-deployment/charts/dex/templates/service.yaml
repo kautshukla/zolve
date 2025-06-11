@@ -1,0 +1,18 @@
+{{- if .Values.global.deploy.dex }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: dex
+  labels:
+    k8s-app: dex
+spec:
+  ports:
+    - port: {{ .Values.global.service.dex.app.port | default 5556 }}
+      targetPort: {{ .Values.global.service.dex.app.port | default 5556 }}
+      protocol: TCP
+      name: http
+  selector:
+    k8s-app: dex
+  sessionAffinity: None
+  type: ClusterIP
+{{- end }}

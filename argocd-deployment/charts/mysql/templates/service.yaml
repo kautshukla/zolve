@@ -1,0 +1,13 @@
+{{- if .Values.global.deploy.mysql }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  ports:
+  - port: {{ .Values.global.service.mysql.app.port | default 80 }}
+    targetPort: {{ .Values.global.service.mysql.app.port | default 80 }}
+    protocol: TCP
+  selector:
+    app: mysql
+{{- end }}
